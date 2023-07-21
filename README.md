@@ -1,2 +1,25 @@
 # Drones-Battle-Royale
 Multi-threading in assembly
+
+We have a 100x100 game board, on which a group of N drones hunts the same target from different points of view and from different distances. Each drone tries to detect where is the target on the game board, in order to destroy it. Drones may destroy the target only if the target is no more than some given distance, d, from the drone. When the current target is destroyed, some new target appears on the game board in some randomly chosen place. Every T rounds the target randomly changes its position. Every R rounds two (or one in case there are only two drones left) of the drones are "eliminated" (in a manner which is described below), the last drone left in the game is the winner of the game.
+
+Each drone has a two-dimensional position on the game board: (coordinate x, coordinate y), and direction (angle from x-axis)*, two drones may occupy the same position. Moreover, each drone has a constant speed which is randomly picked at the start (drone initialization). All the above state variables are represented by floating-point numbers. Drones move according to their speed using their current heading, from their current place. They then randomly change their heading, as described below, before the next move. After each movement, a drone calls the mayDestroy(…) function with its new position on the board. The mayDestroy(…) function returns TRUE if the caller drone may destroy the target, otherwise returns FALSE. If the current target is destroyed, a new target is created at a random position on the game board. Note that drones do not know the coordinates of the target on the board game. In the example below, the blue and the yellow drones are very far from the target and cannot destroy it, and the pink drone is close enough to it. The pink drone can destroy the target.
+
+*these coordinates are represented using floating-point numbers. two drones are allowed to have the same coordinates
+
+When a drone moves from its current position to a new position, it may happen that the distance move makes the drone cross the game field border. We treat drone motion as if on a torus. That is, when the next location is greater than the board width or height or is negative in either axis (this requires checking 4 conditions), subtract or add the torus cycle (100 in this example) if needed. On the first figure below, we see a simple movement of the drone, and on the second figure we may see the movement that would move the drone out of the right border, and instead, it is wrapped around to the left border of the game board. Note that mayDestroy(…) should also consider wrap around. 
+
+he drones and target are managed by threads, one thread each. We call thread a cooperating routine, or co-routine for short. In addition, we have a co-routine for the scheduler that manages when to run the other threads. A specialized co-routine called the printer prints the current state of the game board. A drone’s co-routine number is its id, which should be visible to it as an argument at activation (either in a register or on its own stack, your choice). We use the drone’s id for scheduling and for printing. The program begins by creating the initial state configuration of drones and the initial state of the target. The program initializes appropriate drones and target, and control is then passed to a scheduler co-routine which decides the appropriate scheduling for the co-routines. The scheduling algorithm for drones is ROUND ROBIN, meaning that co-routines are scheduled in a loop: 1,2,3,…,N,1,2,3,…N,… and so on. The printer co-routine should print the current state of the game board each K steps, where step means an execution step of one drone.
+
+Command line arguments
+Note that the game border size is pre-defined to be 100 x 100.
+Your program should get the following command-line arguments (written in ASCII as usual, every argument is 4 bytes in size):
+
+N<int> – number of drones
+R<int> - number of full scheduler cycles between each elimination
+K<int> – how many drone steps between game board printings
+T<int> – how many drone steps between target moves randomly
+d<float> – maximum distance that allows to destroy a target (at most 20)
+seed<int> - seed for initialization of LFSR shift register
+
+Initial configuration is calculated (pseudo)-randomly with 16 bit resolution (for each required number) before the game begins, by the main() function. What this means is: generate a 16-bit pseudo-random integer by using the LFSR to generate 16 new pseudo-random bits (for each required number, shift the register 16 time, computing a new random bit per shift), and scale this pseudo-random number to fit the desired range. All coordinates should be inside the board (may also be on the board borders). Initial angle values are floating point in the range [0,360], but note that you need to convert angles into radians if you want to use the SIN, COS, or SINCOS instructions (recommended). All other values are also floating-point numbers.
